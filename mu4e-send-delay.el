@@ -6,6 +6,7 @@
 ;; Maintainer: Benjamin Andresen <benny@in-ulm.de>
 ;; Version: 20170610.0636
 ;; URL: https://github.com/jleechpe/outorg-export
+;; Package-Requires: ((emacs "24.3"))
 
 ;; This file is not part of GNU Emacs.
 ;;
@@ -36,17 +37,17 @@
 (require 'gnus-util)
 (autoload 'parse-time-string "parse-time" nil nil)
 
-(require 'mu4e-utils)
+(require 'mu4e-view)
 (require 'mu4e-compose)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Delayed sending of messages / Additional composing
 (defgroup mu4e-send-delay nil
-  "Customization for delayed sending of messages"
+  "Customization for delayed sending of messages."
   :group 'mu4e)
 
 (defcustom mu4e-send-delay-flag "delay"
-  "Flag to determine if mail is saved as delay."
+  "Flag for delayed emails."
   :type 'string
   :group 'mu4e-delay)
 
@@ -61,8 +62,8 @@
   :group 'mu4e-delay)
 
 (defcustom mu4e-send-delay-include-header-in-draft t
-  "Whether to include the delay header when starting to draft a
-message; if nil, only do so when sending the message"
+  "Whether to include the delay header when starting to draft a message.
+If nil, only do so when sending the message."
   :type 'bool
   :group 'mu4e-delay)
 
@@ -84,7 +85,7 @@ message; if nil, only do so when sending the message"
 ;; copied from mu4e-delay which is from gnus-delay
 (defun mu4e-send-delay-add-delay-header (delay)
   "Delay this article by some time.
-  DELAY is a string, giving the length of the time.  Possible values are:
+DELAY is a string, giving the length of the time.  Possible values are:
 
   ,* <digits><units> for <units> in minutes (`m'), hours (`h'), days (`d'),
     weeks (`w'), months (`M'), or years (`Y');
@@ -97,7 +98,7 @@ message; if nil, only do so when sending the message"
   (interactive
    (list (read-string
           "Target date (YYYY-MM-DD), time (hh:mm), or length of delay (units in [mhdwMY]): "
-          mu4e-delay-default-delay)))
+          mu4e-send-delay-default-delay)))
   ;; Allow spell checking etc.
   (run-hooks 'message-send-hook)
   (let (num unit days year month day hour minute deadline)
@@ -110,7 +111,7 @@ message; if nil, only do so when sending the message"
            (setq deadline
                  (message-make-date
                   (encode-time 0 0      ; second and minute
-                               mu4e-delay-default-hour
+                               mu4e-send-delay-default-hour
                                day month year))))
           ((string-match "\\([0-9]+\\):\\([0-9]+\\)" delay)
            (setq hour   (string-to-number (match-string 1 delay))
@@ -152,17 +153,17 @@ message; if nil, only do so when sending the message"
     (message-add-header (format "%s: %s" mu4e-send-delay-header deadline))
     deadline))
 
-;; bind this command
-(defun mu4e-send-delay-send-and-exit (&optional instant)
-  "Delayed send this mail, unless INSTANT (prefix-argument) is non-nil. "
+(defun mu4e-send-delay-send-and-exit (&optional delay)
+  "Send this email.
+If DELAY, then delay sending this email."
   (interactive "P")
-  (if instant
-      (progn
-        (message-remove-header mu4e-send-delay-header nil t)
-        (message-send-and-exit))
-    (mu4e-send-delay-postpone-and-exit)))
+  (if delay
+      (mu4e-send-delay-postpone-and-exit)
+    (message-remove-header mu4e-send-delay-header nil)
+    (message-send-and-exit)))
 
 (defun mu4e-send-delay-postpone-and-exit ()
+  "Delay send email and exit message buffer."
   (let ((buffer (current-buffer)) schedule-time)
     (setq schedule-time (mu4e-send-delay-schedule-this-mail))
     (if message-kill-buffer-on-exit
@@ -170,17 +171,16 @@ message; if nil, only do so when sending the message"
     (mu4e-message "Mail scheduled for sending at: %s" schedule-time)))
 
 (defun mu4e-send-delay-schedule-this-mail ()
+  "Set delay header value for this email.
+Returns time for scheduled send."
   (condition-case err
       (progn
-        (if (not (equal major-mode 'mu4e-compose-mode))
-            (error "Not a mu4e:compose buffer."))
-
-        ;; set reply/forward flag
+        ;; Set reply/forward flag
         (when (buffer-file-name) (mu4e~compose-set-parent-flag (buffer-file-name)))
 
-        (let (schedule-time current-header-value)
+        (let (schedule-time delay-header-value)
           (setq delay-header-value (message-fetch-field mu4e-send-delay-header))
-          (if delay-header-value (message-remove-header mu4e-send-delay-header))
+          (when delay-header-value (message-remove-header mu4e-send-delay-header))
           (setq schedule-time
                 (mu4e-send-delay-add-delay-header (or delay-header-value
                                                       mu4e-send-delay-default-delay)))
@@ -191,54 +191,60 @@ message; if nil, only do so when sending the message"
 ;; Show up in the main view
 (add-to-list 'mu4e-header-info-custom
              '(:send-delay . ( :name "Scheduled"
-                                     :shortname "Delay"
-                                     :help "Date/Time when mail is scheduled for dispatch"
-                                     :function (lambda (msg)
-                                                 (mu4e-send-delay-header-value
-                                                  (mu4e-message-field msg :path))))))
+                               :shortname "Delay"
+                               :help "Date/Time when mail is scheduled for dispatch"
+                               :function (lambda (msg)
+                                           (mu4e-send-delay-header-value
+                                            (mu4e-message-field msg :path))))))
 (add-to-list 'mu4e-view-fields :send-delay t)
 
 (defun mu4e-send-delay-header-value (file-path)
+  "Return delay header value for email at FILE-PATH."
   (ignore-errors
     (with-temp-buffer
       (insert-file-contents file-path)
       (goto-char (point-min))
       (re-search-forward (concat "^" (regexp-quote mu4e-send-delay-header) ":\\s-+"))
-      (buffer-substring (point) (point-at-eol)))))
+      (buffer-substring (point) (pos-eol)))))
 
 (defun mu4e-send-delay-time-elapsed-p (time-string)
-  ;; if it's not a valid time-string, don't encode it
+  "Return non-nil if TIME-STRING has passed, and nil otherwise."
   (let ((parsed-ts (parse-time-string time-string)))
-    (when (not (cl-every #'null parsed-ts))
+    (unless (cl-every #'null parsed-ts)
       (let* ((delay-time (apply 'encode-time parsed-ts))
              (time-since (time-since delay-time)))
         (and (>= (nth 0 time-since) 0)
              (>= (nth 1 time-since) 0))))))
 
 (defun mu4e-send-delay-elapsed-p (file-path)
+  "Return non-nil if delay header for FILE-PATH has passed."
   (let ((header-value (mu4e-send-delay-header-value file-path)))
-    (if header-value (mu4e-send-delay-time-elapsed-p header-value))))
+    (when header-value (mu4e-send-delay-time-elapsed-p header-value))))
 
 (defun mu4e-send-delay-file-buffer-open (mail-file-path)
+  "Return and open buffer visiting MAIL-FILE-PATH."
   (get-file-buffer mail-file-path))
 
 (defun mu4e-send-delay-draft-delete-header ()
+  "Remove delay header."
   (message-remove-header mu4e-send-delay-header nil t))
 
 (defun mu4e-send-delay-draft-add-header ()
+  "Add delay header and give it its default value."
   (message-add-header (format "%s: %s"
                               mu4e-send-delay-header
                               mu4e-send-delay-default-delay)))
 
 (defun mu4e-send-delay-draft-refresh-header (&optional draft-buffer)
+  "Reset delay header and its value.
+Do this for DRAFT-BUFFER instead if non-nil."
   (save-excursion
     (with-current-buffer (or draft-buffer (current-buffer))
       (mu4e-send-delay-draft-delete-header)
       (mu4e-send-delay-draft-add-header))))
 
 (defun mu4e-send-delay-send-if-due (mail-file-path)
-  "Send mail when MAIL-FILE-PATH contains scheduled time earlier
-than current time and is not currently being edited."
+  "Send mail at MAIL-FILE-PATH if it should be sent and is not being edited."
   (when (and (mu4e-send-delay-elapsed-p mail-file-path)
              (not (mu4e-send-delay-file-buffer-open mail-file-path)))
     (condition-case err
@@ -262,6 +268,7 @@ than current time and is not currently being edited."
       (error "mu4e-send: %s" err))))
 
 (defun mu4e-send-delay-move-to-sent-and-delete-draft (mail-file-path)
+  "Move mail at MAIL-FILE-PATH to sent folder and delete stored draft."
   (let (buf file)
     (when mail-file-path
       (setq buf (find-file-noselect mail-file-path))
@@ -279,9 +286,7 @@ than current time and is not currently being edited."
       (message-remove-header mu4e-send-delay-header nil)
 
       ;; write mail to Sent-folder
-      (when file
-        (write-file file))
-
+      (when file (write-file file))
       (set-buffer-modified-p nil)
       (kill-buffer (current-buffer))
 
@@ -292,16 +297,18 @@ than current time and is not currently being edited."
         (kill-buffer buf)))))
 
 (defmacro mu4e-send-delay-with-mu4e-context (context &rest body)
-  "Evaluate BODY, with `mu4e~current-context' set and
-`with~mu4e-context-vars'"
+  "Evaluate BODY under CONTEXT.
+Sets `mu4e--context-current' to CONTEXT set and evaluates with
+`with-mu4e-context-vars'."
   (declare (indent 2))
-  `(let* ((mu4e~context-current ,context))
-     (with~mu4e-context-vars ,context
+  `(let* ((mu4e--context-current ,context))
+     (with-mu4e-context-vars ,context
          ,@body)))
 
 (defun mu4e-send-delay-get-drafts-folder ()
+  "Return file path of current drafts folder."
   (expand-file-name
-   (concat mu4e-maildir (mu4e-get-drafts-folder) "/cur")))
+   (concat (mu4e-root-maildir) (mu4e-get-drafts-folder) "/cur")))
 
 (defun mu4e-send-delay-send-queue ()
   "Send all delayed mails that are due now."
@@ -321,7 +328,7 @@ than current time and is not currently being edited."
       (mu4e-update-index))))
 
 (defvar mu4e-send-delay-send-queue-timer nil
-  "Timer to run `mu4e-send-delay-send-queue'")
+  "Timer to run `mu4e-send-delay-send-queue'.")
 
 (defun mu4e-send-delay-initialize-send-queue-timer ()
   "Set up `mu4e-send-delay-send-queue' to run on a timer."
@@ -330,22 +337,21 @@ than current time and is not currently being edited."
     (setq mu4e-send-delay-send-queue-timer
           (run-with-timer 0 mu4e-send-delay-timer #'mu4e-send-delay-send-queue))))
 
+(defun mu4e-send-delay-maybe-write-draft-header ()
+  "Add delay header;; when `mu4e-send-delay-include-header-in-draft' is non-nil."
+  (when mu4e-send-delay-include-header-in-draft
+    (mu4e~draft-header mu4e-send-delay-header mu4e-send-delay-default-delay)))
+
 (defun mu4e-send-delay-setup ()
-  "Sets up `mu4e-compose-mode-hook' and defines modified `mu4e~draft-common-construct' for Drafts
-`mu4e-compose-mode-hook' is used to refresh the schedule header upon edit and
-`mu4e~draft-common-construct' is used to include the initial mu4e-send-delay header value."
+  "Make sure delay header is added when composing emails.
+Adds to `mu4e-compose-mode-hook' and
+`mu4e~draft-common-construct'. `mu4e-compose-mode-hook' is used
+to refresh the schedule header upon editing and
+`mu4e~draft-common-construct' is used to include
+`mu4e-send-delay-default-delay'."
   (interactive)
   (add-hook 'mu4e-compose-mode-hook #'mu4e-send-delay-draft-refresh-header)
-
-  ;; Find a better way to do this
-  (defun mu4e~draft-common-construct ()
-    "Construct the common headers for each message."
-    (concat
-     (mu4e~draft-header "User-agent" mu4e-user-agent-string)
-     (when mu4e-compose-auto-include-date
-       (mu4e~draft-header "Date" (message-make-date)))
-     (when mu4e-send-delay-include-header-in-draft
-       (mu4e~draft-header mu4e-send-delay-header mu4e-send-delay-default-delay)))))
+  (advice-add 'mu4e~draft-common-construct :after #'mu4e-send-delay-maybe-write-draft-header))
 
 (provide 'mu4e-send-delay)
 
