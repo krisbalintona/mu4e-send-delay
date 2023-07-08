@@ -285,8 +285,10 @@ Do this for DRAFT-BUFFER instead if non-nil."
       (message-remove-header "fcc" nil)
       (message-remove-header mu4e-send-delay-header nil)
 
-      ;; write mail to Sent-folder
-      (when file (write-file file))
+      ;; Write mail to Sent-folder. See relevant issue in
+      ;; https://emacs.stackexchange.com/questions/50263/emails-sent-twice-in-mu4e-with-send-delay
+      (unless (equal 'mu4e-sent-messages-behavior 'sent)
+        (when file (write-file file)))
       (set-buffer-modified-p nil)
       (kill-buffer (current-buffer))
 
