@@ -79,7 +79,7 @@ If nil, add delay header only when sending the message."
 ;;;; Functions
 ;;;;; Time strings and parsing
 ;; Copied from mu4e-delay which is from gnus-delay
-(defun mu4e-send-delay-create-delay-header-string (delay)
+(defun mu4e-send-delay-parse-delay-header-string (delay)
   "Return due date for email delayed by or to DELAY.
 DELAY is a string, giving the length of the time. Possible values
 are:
@@ -171,7 +171,7 @@ are:
   "Schedule send email and exit current email composition buffer."
   (condition-case err
       (let* ((schedule-time
-              (mu4e-send-delay-create-delay-header-string (or (message-fetch-field mu4e-send-delay-header) mu4e-send-delay-default-delay))))
+              (mu4e-send-delay-parse-delay-header-string (or (message-fetch-field mu4e-send-delay-header) mu4e-send-delay-default-delay))))
         ;; Replace delay header value with a time string
         (message-remove-header mu4e-send-delay-header nil t)
         (message-add-header (format "%s: %s" mu4e-send-delay-header schedule-time))
