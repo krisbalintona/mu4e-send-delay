@@ -220,12 +220,14 @@ lead to duplicate emails that you will have to manually remove."
   (pcase mu4e-sent-messages-behavior
     ((or 'sent 'trash)
      ;; REVIEW 2023-07-08: Not sure if this is the correct behavior, since I
-     ;; don't use `trash' or `sent', so I haven't confirmed it
+     ;; don't use `trash' or `sent', so I haven't tested it
      (with-temp-buffer
        (insert-file-contents file-path)
-       (message-remove-header "fcc" nil t)
-       (message-remove-header mu4e-send-delay-header nil t)
-       (write-file (message-fetch-field "fcc"))
+       (when-let ((file (message-fetch-field "fcc")))
+         (message-remove-header "fcc" nil t)
+         (message-remove-header mu4e-send-delay-header nil t)
+         (write-file file)
+         (set-buffer-modified-p nil))
        (delete-file file-path)))
     ('delete (delete-file file-path))))
 
