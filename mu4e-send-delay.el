@@ -41,7 +41,6 @@
 (require 'mu4e-draft)
 
 ;;;; Custom options
-;; Delayed sending of messages / Additional composing
 (defgroup mu4e-send-delay nil
   "Customization for delayed sending of messages."
   :group 'mu4e)
@@ -77,7 +76,7 @@ If nil, add delay header only when sending the message."
   :type 'integer
   :group 'mu4e-delay)
 
-;;;; Helper functions
+;;;; Functions
 ;;;;; Time strings and parsing
 ;; Copied from mu4e-delay which is from gnus-delay
 (defun mu4e-send-delay-create-delay-header-string (delay)
@@ -169,7 +168,7 @@ are:
 
 ;;;;; Scheduling during email composition
 (defun mu4e-send-delay-schedule-and-exit ()
-  "Delay send email and exit current message buffer."
+  "Schedule send email and exit current email composition buffer."
   (condition-case err
       (let* ((schedule-time
               (mu4e-send-delay-create-delay-header-string (or (message-fetch-field mu4e-send-delay-header) mu4e-send-delay-default-delay))))
@@ -186,6 +185,7 @@ are:
 
 (defun mu4e-send-delay-send-and-exit (&optional delay)
   "Send this email.
+
 If DELAY, then delay sending this email."
   (interactive "P")
   (run-hooks 'message-send-hook)
@@ -198,7 +198,8 @@ If DELAY, then delay sending this email."
 ;;;;; Sending
 (defmacro mu4e-send-delay-with-mu4e-context (context &rest body)
   "Evaluate BODY under CONTEXT.
-Sets `mu4e--context-current' to CONTEXT set and evaluates with
+
+Sets `mu4e--context-current' to CONTEXT and evaluates with
 `with-mu4e-context-vars'."
   (declare (indent 2))
   `(let* ((mu4e--context-current ,context))
@@ -207,10 +208,11 @@ Sets `mu4e--context-current' to CONTEXT set and evaluates with
 
 (defun mu4e-send-delay-move-or-delete-draft (file-path)
   "Move mail at FILE-PATH to sent folder and delete stored draft.
+
 Be aware that `mu4e-sent-messages-behavior' should be set to
-`trash' or `delete' since GMail automatically sends copies to the
-sent folder, meaning a value of `set' will lead to duplicate
-emails."
+`trash' or `delete' if using GMail, since GMail automatically
+sends copies to the sent folder, meaning a value of `set' will
+lead to duplicate emails that you will have to manually remove."
   ;; NOTE 2023-07-08: The FCC header is only added by mu4e for the values of
   ;; `trash' and `send'. See `mu4e~compose-setup-fcc-maybe'
   (pcase mu4e-sent-messages-behavior
@@ -243,7 +245,7 @@ emails."
       (error "mu4e-send: %s" err))))
 
 (defun mu4e-send-delay-send-due ()
-  "Send all delayed mails that are due now."
+  "Send all delayed mail drafts that are due."
   (interactive)
   (when (mu4e-root-maildir)
     (let* ((dirs (if mu4e-contexts
@@ -271,22 +273,20 @@ emails."
     (setq mu4e-send-delay-send-due-timer
           (run-with-timer 0 mu4e-send-delay-timer #'mu4e-send-delay-send-due))))
 
-;;;; Set up
+;;;; Setup
 (defun mu4e-send-delay-setup ()
   "Make sure delay header is added when composing emails.
-Adds to `mu4e-compose-mode-hook' and
-`mu4e~draft-common-construct'. `mu4e-compose-mode-hook' is used
-to refresh the schedule header upon editing and
-`mu4e~draft-common-construct' is used to include
-`mu4e-send-delay-default-delay'."
+
+Advise `mu4e~draft-common-construct' since it is used by mu4e to
+insert headers across all mu4e's email composition buffers."
   (interactive)
   (mu4e-send-delay-initialize-send-queue-timer)
   (advice-add 'mu4e~draft-common-construct :around
                                            #'(lambda (orig-fun &rest args)
-                                                     (concat
-                                                      (apply orig-fun args)
-                                                      (when mu4e-send-delay-include-header-in-draft
-                                                        (mu4e~draft-header mu4e-send-delay-header mu4e-send-delay-default-delay))))))
+                                                (concat
+                                                 (apply orig-fun args)
+                                                 (when mu4e-send-delay-include-header-in-draft
+                                                   (mu4e~draft-header mu4e-send-delay-header mu4e-send-delay-default-delay))))))
 
 ;; Show in the main view
 (add-to-list 'mu4e-header-info-custom
