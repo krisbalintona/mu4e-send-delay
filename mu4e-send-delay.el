@@ -40,6 +40,8 @@
 (require 'mu4e-compose)
 (require 'mu4e-draft)
 
+(declare-function org-msg-edit-mode "org-msg" ())
+
 ;;;; Custom options
 (defgroup mu4e-send-delay nil
   "Customization for delayed sending of messages."
@@ -233,16 +235,19 @@ lead to duplicate emails that you will have to manually remove."
              (not (get-file-buffer file-path))) ; Not opened
     (condition-case err
         (progn
-          ;; Force recode to fix character encoding issue
-          (set-buffer-file-coding-system 'utf-8 t)
-          (recode-region (point-min) (point-max) 'prefer-utf-8 'utf-8-unix)
-
-          (when mu4e-send-delay-strip-header-before-send
-            (message-remove-header mu4e-send-delay-header nil t))
-          (message-send-mail)
-          (mu4e-send-delay-move-or-delete-draft file-path)
-          t)
-      (error "mu4e-send: %s" err))))
+          ;; Put contents into temp buffer, then send that buffer
+          (with-temp-buffer
+            (insert-file-contents-literally file-path)
+            ;; Force recode to fix character encoding issue
+            (set-buffer-file-coding-system 'utf-8 t)
+            (recode-region (point-min) (point-max) 'prefer-utf-8 'utf-8-unix)
+            (when mu4e-send-delay-strip-header-before-send
+              (message-remove-header mu4e-send-delay-header nil t))
+            (message-send-mail))
+          ;; Then deal with the original file (by moving it to the appropriate
+          ;; folder or deleting it)
+          (mu4e-send-delay-move-or-delete-draft file-path))
+      (error "mu4e-delay-send: %s" err))))
 
 (defun mu4e-send-delay-send-due ()
   "Send all delayed mail drafts that are due."
@@ -271,7 +276,7 @@ lead to duplicate emails that you will have to manually remove."
   (interactive)
   (unless mu4e-send-delay-send-due-timer
     (setq mu4e-send-delay-send-due-timer
-          (run-with-timer 0 mu4e-send-delay-timer #'mu4e-send-delay-send-due))))
+          (run-with-timer 0 mu4e-send-delay-timer 'mu4e-send-delay-send-due))))
 
 ;;;; Setup
 (defun mu4e-send-delay-setup ()
