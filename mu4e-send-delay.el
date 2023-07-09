@@ -209,7 +209,7 @@ Sets `mu4e--context-current' to CONTEXT and evaluates with
          ,@body)))
 
 (defun mu4e-send-delay-move-or-delete-draft (file-path)
-  "Move mail at FILE-PATH to sent folder and delete stored draft.
+  "Move mail at FILE-PATH appropriately or delete stored draft.
 
 Be aware that `mu4e-sent-messages-behavior' should be set to
 `trash' or `delete' if using GMail, since GMail automatically
@@ -237,18 +237,19 @@ lead to duplicate emails that you will have to manually remove."
              (not (get-file-buffer file-path))) ; Not opened
     (condition-case err
         (progn
-          ;; Put contents into temp buffer, then send that buffer
-          (with-temp-buffer
-            (insert-file-contents-literally file-path)
+          (with-current-buffer (find-file-noselect file-path)
             ;; Force recode to fix character encoding issue
             (set-buffer-file-coding-system 'utf-8 t)
             (recode-region (point-min) (point-max) 'prefer-utf-8 'utf-8-unix)
+            (mu4e~draft-insert-mail-header-separator)
+            (message-mode)
             (when mu4e-send-delay-strip-header-before-send
               (message-remove-header mu4e-send-delay-header nil))
-            (message-send-mail))
+            (message-send))
           ;; Then deal with the original file (by moving it to the appropriate
           ;; folder or deleting it)
-          (mu4e-send-delay-move-or-delete-draft file-path))
+          (mu4e-send-delay-move-or-delete-draft file-path)
+          t)
       (error "mu4e-delay-send: %s" err))))
 
 (defun mu4e-send-delay-send-due ()
@@ -285,7 +286,12 @@ lead to duplicate emails that you will have to manually remove."
   "Make sure delay header is added when composing emails.
 
 Advise `mu4e~draft-common-construct' since it is used by mu4e to
-insert headers across all mu4e's email composition buffers."
+insert headers across all mu4e's email composition buffers.
+
+Running this command more than once will advise
+`mu4e~draft-common-construct' multiple times, leading to multiple
+delay headers being inserted upon composition (which can be
+manually removed afterward)."
   (interactive)
   (mu4e-send-delay-initialize-send-queue-timer)
   (advice-add 'mu4e~draft-common-construct :around
