@@ -175,7 +175,7 @@ are:
       (let* ((schedule-time
               (mu4e-send-delay-parse-delay-header-string (or (message-fetch-field mu4e-send-delay-header) mu4e-send-delay-default-delay))))
         ;; Replace delay header value with a time string
-        (message-remove-header mu4e-send-delay-header nil t)
+        (message-remove-header mu4e-send-delay-header nil)
         (message-add-header (format "%s: %s" mu4e-send-delay-header schedule-time))
 
         (when (buffer-file-name) (mu4e~compose-set-parent-flag (buffer-file-name))) ; Set reply/forward flag
@@ -194,7 +194,7 @@ If DELAY, then delay sending this email."
   (if delay
       (mu4e-send-delay-schedule-and-exit)
     (when mu4e-send-delay-strip-header-before-send
-      (message-remove-header mu4e-send-delay-header nil t))
+      (message-remove-header mu4e-send-delay-header nil))
     (message-send-and-exit))) ; REVIEW 2023-07-08: Should this change if using `org-msg?'
 
 ;;;;; Sending
@@ -224,8 +224,8 @@ lead to duplicate emails that you will have to manually remove."
      (with-temp-buffer
        (insert-file-contents file-path)
        (when-let ((file (message-fetch-field "fcc")))
-         (message-remove-header "fcc" nil t)
-         (message-remove-header mu4e-send-delay-header nil t)
+         (message-remove-header "fcc" nil)
+         (message-remove-header mu4e-send-delay-header nil)
          (write-file file)
          (set-buffer-modified-p nil))
        (delete-file file-path)))
@@ -244,7 +244,7 @@ lead to duplicate emails that you will have to manually remove."
             (set-buffer-file-coding-system 'utf-8 t)
             (recode-region (point-min) (point-max) 'prefer-utf-8 'utf-8-unix)
             (when mu4e-send-delay-strip-header-before-send
-              (message-remove-header mu4e-send-delay-header nil t))
+              (message-remove-header mu4e-send-delay-header nil))
             (message-send-mail))
           ;; Then deal with the original file (by moving it to the appropriate
           ;; folder or deleting it)
