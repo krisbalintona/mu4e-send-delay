@@ -1,4 +1,4 @@
-;;; mu4e-send-delay.el --- Delay sending of mails in mu4e
+;;; mu4e-send-delay.el --- Delay sending of mails in mu4e -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2016-2017 Benjamin Andresen <benny@in-ulm.de>
 
