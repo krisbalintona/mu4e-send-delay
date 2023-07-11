@@ -153,20 +153,28 @@ are:
 
 (defun mu4e-send-delay-return-delay-header-value (file-path)
   "Return delay header value for email at FILE-PATH."
-  (ignore-errors
-    (with-temp-buffer
-      (insert-file-contents file-path)
-      (message-fetch-field mu4e-send-delay-header))))
+  (if (file-exists-p file-path)
+      (let (found-value parsed-value)
+        (with-temp-buffer
+          (insert-file-contents file-path)
+          (setq found-value (message-fetch-field mu4e-send-delay-header))
+          (when found-value
+            (setq parsed-value (mu4e-send-delay-parse-delay-header-string found-value))
+            ;; Make sure found-value is a parsed time string (a little janky,
+            ;; but there is no real-world use case this would fail)
+            (when (eq (length found-value) (length parsed-value))
+              found-value))))
+    (user-error "[mu4e-send-delay-return-delay-header-value] %s does not exist" file-path)))
 
 (defun mu4e-send-delay-elapsed-p (file-path)
   "Return non-nil if the time string in email at FILE-PATH has passed."
   (when-let* ((header-value (mu4e-send-delay-return-delay-header-value file-path))
               (parsed-ts (parse-time-string header-value)))
     (unless (cl-every #'null parsed-ts)
-      (let* ((delay-time (apply 'encode-time parsed-ts))
-             (time-since (time-since delay-time)))
-        (and (>= (nth 0 time-since) 0)
-             (>= (nth 1 time-since) 0))))))
+      (let* ((delay-time (encode-time parsed-ts))
+             (time-passed (time-since delay-time)))
+        (and (>= (nth 0 time-passed) 0)
+             (>= (nth 1 time-passed) 0))))))
 
 ;;;;; Scheduling during email composition
 (defun mu4e-send-delay-schedule-and-exit ()
