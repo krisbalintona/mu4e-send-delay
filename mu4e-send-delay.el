@@ -203,7 +203,7 @@ If DELAY, then delay sending this email."
       (mu4e-send-delay-schedule-and-exit)
     (when mu4e-send-delay-strip-header-before-send
       (message-remove-header mu4e-send-delay-header nil))
-    (message-send-and-exit))) ; REVIEW 2023-07-08: Should this change if using `org-msg?'
+    (message-send-and-exit)))
 
 ;;;;; Sending
 (defmacro mu4e-send-delay-with-mu4e-context (context &rest body)
