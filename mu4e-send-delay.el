@@ -291,15 +291,18 @@ lead to duplicate emails that you will have to manually remove."
 
 ;;;; Setup
 (defun mu4e-send-delay-setup ()
-  "Make sure delay header is added when composing emails.
+  "Run this command to set up `mu4e-send-delay'.
 
-Advise `mu4e~draft-common-construct' since it is used by mu4e to
-insert headers across all mu4e's email composition buffers.
+Make sure delay header is added when composing emails. Advise
+`mu4e~draft-common-construct' since it is used by mu4e to insert
+headers across all mu4e's email composition buffers.
 
 Running this command more than once will advise
 `mu4e~draft-common-construct' multiple times, leading to multiple
 delay headers being inserted upon composition (which can be
-manually removed afterward)."
+manually removed afterward).
+
+Also show delay info in `mu4e-headers-mode' and `mu4e-view-mode'."
   (interactive)
   (mu4e-send-delay-initialize-send-queue-timer)
   (advice-add 'mu4e~draft-common-construct :around
@@ -307,21 +310,17 @@ manually removed afterward)."
                                                 (concat
                                                  (apply orig-fun args)
                                                  (when mu4e-send-delay-include-header-in-draft
-                                                   (mu4e~draft-header mu4e-send-delay-header mu4e-send-delay-default-delay))))))
-
-;; Show in the main view
-(add-to-list 'mu4e-header-info-custom
-             '(:send-delay . (:name "X-Delay"
-                              :shortname "Delay"
-                              :help "Date/time when mail is scheduled for sending"
-                              :function (lambda (msg)
-                                          (or
-                                           (mu4e-send-delay-return-delay-header-value
-                                            (mu4e-message-field msg :path))
-                                           "")))))
-(add-to-list 'mu4e-view-fields :send-delay t)
-
-;;;
+                                                   (mu4e~draft-header mu4e-send-delay-header mu4e-send-delay-default-delay)))))
+  (add-to-list 'mu4e-header-info-custom
+               '(:send-delay . (:name "X-Delay"
+                                :shortname "Delay"
+                                :help "Date/time when mail is scheduled for sending"
+                                :function (lambda (msg)
+                                            (or
+                                             (mu4e-send-delay-return-delay-header-value
+                                              (mu4e-message-field msg :path))
+                                             "")))))
+  (add-to-list 'mu4e-view-fields :send-delay t))
 
 (provide 'mu4e-send-delay)
 
