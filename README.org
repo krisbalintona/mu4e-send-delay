@@ -8,6 +8,7 @@ This fork has several notable differences from the original. They are listed bel
 1. Refactored code. Works with the latest versions of =mu4e= and is more hackable.
 2. Several default values changed to be more sensible.
 3. Addressed several undesirable interactions users may come across.
+4. Has explicit support for [[https://github.com/jeremy-compostella/org-msg][Org-msg]].
 
 *Be aware that this fork has not been thoroughly tested yet, and bugs may be present.* I advise that users do limited testing on their configuration (e.g. sending emails to themselves) prior to actual use.
 
@@ -81,6 +82,12 @@ The command =mu4e-send-delay-send-and-exit= is responsible for initiating =mu4e-
 #+BEGIN_SRC emacs-lisp
   (define-key mu4e-compose-mode-map [remap message-send-and-exit] 'mu4e-send-delay-send-and-exit)
 #+END_SRC
+
+** =Org-msg=
+
+This package is compatible with [[https://github.com/jeremy-compostella/org-msg][Org-msg]]. The only configuration necessary is setting =mu4e-send-delay-enable-org-msg= to a non-nil value.
+
+Be aware that if =mu4e-send-delay-enable-org-msg= is non-nil =mu4e-send-delay= overrides =org-msg-ctrl-c-ctrl-c=. Look at =mu4e-message-send-delay-org-msg-ctrl-c-ctrl-c= to see what is done.
 
 ** Variables
 

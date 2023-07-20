@@ -78,6 +78,14 @@ If nil, add delay header only when sending the message."
   :type 'integer
   :group 'mu4e-delay)
 
+(defcustom mu4e-send-delay-enable-org-msg nil
+  "Whether the user wants to enable compatibility with `org-msg'.
+
+Toggle `mu4e-send-delay-setup' if you change the value of this
+variable after `mu4e-send-delay-setup' has already been called"
+  :type 'bool
+  :group 'mu4e-delay)
+
 ;;;; Functions
 ;;;;; Time strings and parsing
 ;; Copied from mu4e-delay which is from gnus-delay
@@ -289,6 +297,20 @@ lead to duplicate emails that you will have to manually remove."
     (setq mu4e-send-delay-send-due-timer
           (run-with-timer 0 mu4e-send-delay-timer 'mu4e-send-delay-send-due))))
 
+;;;; org-msg advice
+(defun mu4e-send-delay-org-msg-ctrl-c-ctrl-c (arg)
+  "Send message like `message-send-and-exit'.
+
+Identical to the original `org-msg-ctrl-c-ctrl-c', but calls
+`mu4e-send-delay-send-and-exit' instead as well as passes ARG to
+it."
+  (interactive (list current-prefix-arg))
+  (when (eq major-mode 'org-msg-edit-mode)
+    (org-msg-sanity-check)
+    (if current-prefix-arg
+        (org-msg-mua-call 'send 'mu4e-send-delay-send-and-exit arg)
+      (org-msg-mua-call 'send-and-exit 'mu4e-send-delay-send-and-exit arg))))
+
 ;;;; Setup
 (defun mu4e-send-delay-setup ()
   "Run this command to set up `mu4e-send-delay'.
@@ -320,7 +342,10 @@ Also show delay info in `mu4e-headers-mode' and `mu4e-view-mode'."
                                              (mu4e-send-delay-return-delay-header-value
                                               (mu4e-message-field msg :path))
                                              "")))))
-  (add-to-list 'mu4e-view-fields :send-delay t))
+  (add-to-list 'mu4e-view-fields :send-delay t)
+  (if mu4e-send-delay-enable-org-msg
+      (advice-add 'org-msg-ctrl-c-ctrl-c :override #'mu4e-message-send-delay-org-msg-ctrl-c-ctrl-c)
+    (advice-remove 'org-msg-ctrl-c-ctrl-c :override #'mu4e-message-send-delay-org-msg-ctrl-c-ctrl-c)))
 
 (provide 'mu4e-send-delay)
 
