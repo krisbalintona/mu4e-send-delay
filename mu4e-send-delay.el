@@ -63,12 +63,12 @@ If nil, add delay header only when sending the message."
   :type 'bool
   :group 'mu4e-delay)
 
-(defcustom mu4e-send-delay-default-delay "3m"
+(defcustom mu4e-send-delay-default-delay "10m"
   "Default length of delay."
   :type 'string
   :group 'mu4e-delay)
 
-(defcustom mu4e-send-delay-default-hour "8"
+(defcustom mu4e-send-delay-default-hour "7"
   "Default length of delay."
   :type 'string
   :group 'mu4e-delay)
