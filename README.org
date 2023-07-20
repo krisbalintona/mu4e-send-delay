@@ -1,73 +1,98 @@
-#+TITLE:	mu4e-send-delay
-#+STARTUP:	content
+#+TITLE:    mu4e-send-delay: Schedule send emails
 
-* Purpose
+* Description
 
-Allowing to schedule mails to be sent at a later time. Thus enabling
-the ability to "undo send" mails.
+Delay sending mail by a desired amount of time. Similar to Gmail's “schedule send” feature, which sends emails after a designated amount of time, rather than immediately. This was repo is fork of the original, [[https://github.com/bennyandresen/mu4e-send-delay][bennyandresen/mu4e-send-delay]], which was forked from [[https://github.com/benmaughan/mu4e-delay][benmaughen's mu4e-delay]].
 
-I'm aware of [[https://github.com/benmaughan/mu4e-delay][benmaughen's mu4e-delay]] but it was lacking features which
-I wanted.
-Thanks to him for the inspiration and to Kai Großjohann for
-=gnus-delay.el= which I copied code from. (=mu4e-send-delay-add-delay-header=)
+This fork has several notable differences from the original. They are listed below:
+1. Refactored code. Works with the latest versions of =mu4e= and is more hackable.
+2. Several default values changed to be more sensible.
+3. Addressed several undesirable interactions users may come across.
 
-Features:
+*Be aware that this fork has not been thoroughly tested yet, and bugs may be present.* I advise that users do limited testing on their configuration (e.g. sending emails to themselves) prior to actual use.
 
-  - mu4e context support
-  - Saves scheduled mails to =mu4e-drafts-folder=
-  - Uses an emacs timer to check Drafts if a mail is scheduled to be sent now
-  - Allows easy edit of the X-Delay header in mu4e-compose-mode
-  - Displays scheduled time in *mu4e-view*
-  - Doesn't send if mail is currently being edited
-  - Works with attachments
+** Features
+
++ =mu4e= context support
++ Saves scheduled mails to =mu4e-drafts-folder=
++ Uses an Emacs timer to check if delayed mail is scheduled to be sent now
++ Allows easy edit of the “X-Delay” header in =mu4e-compose-mode=
++ Displays scheduled time in =mu4e-view=
++ Doesn't send if mail is currently being edited
++ Works with attachments
 
 * Install
 
-1. Put =mu4e-send-delay.el= into a directory in you load-path and require it.
-#+begin_src emacs-lisp :tangle yes
-(add-to-list 'load-path "path/to/directory") ; that contains mu4e-send-delay.el
-(require 'mu4e-send-delay)
-#+end_src
-
-2. Setup mu4e-send-delay-setup
-#+BEGIN_SRC emacs-lisp
-(mu4e-send-delay-setup) ; sets up headers to show up by default
-#+END_SRC
-
-3. Initialize the timer that works through the Drafts to send delayed mails
-#+BEGIN_SRC emacs-lisp
-(add-hook 'mu4e-main-mode-hook 'mu4e-send-delay-initialize-send-queue-timer)
-#+END_SRC
-
 ** Requirements
+
 - Has only been tested on Emacs 24.5 and later
 - With [[https://github.com/djcb/mu-releases][mu 0.9.16]]
 
-* Particularies
+** Manual
 
-Right now the sent buffer will be re-encoded to utf-8, to avoid mml.el complaining upon a scheduled sent.
-If you notice your mails arriving garbled despite looking okay in the Drafts, please consider the following emacs options:
-#+begin_src emacs-lisp :tangle yes
-(prefer-coding-system 'utf-8)
-(set-language-environment "UTF-8")
+Put =mu4e-send-delay.el= into a directory in you load-path and require it.
+#+begin_src emacs-lisp
+  (add-to-list 'load-path "path/to/directory") ; that contains mu4e-send-delay.el
+  (require 'mu4e-send-delay)
 #+end_src
 
-* Recommended settings
+** Straight.el
 
-Assigning the scheduled enabled send to =C-c C-c=
+To install this fork, provide a special recipe to =straight=:
+#+begin_src emacs-lisp
+  (use-package mu4e-send-delay
+    :straight (:type git :host github :repo "krisbalintona/mu4e-send-delay")
+    :hook (mu4e-main-mode . mu4e-send-delay-setup)) ; or similar hooks
+#+end_src
 
+** Elpaca
+
+Do the same with =elpaca=:
+#+begin_src emacs-lisp
+  (use-package mu4e-send-delay
+    :elpaca (:type git :host github :repo "krisbalintona/mu4e-send-delay")
+    :hook (mu4e-main-mode . mu4e-send-delay-setup)) ; or similar hooks
+#+end_src
+
+* Setup
+
+Simply run the =mu4e-send-delay-setup=, either manually or through a hook. This command
+1. sets up a timer to check if a delayed email should be sent (see =mu4e-send-delay-timer=)
+2. automatically inserts the “X-Delay” header to emails (see =mu4e-send-delay-header=)
+
+Finally,
+=mu4e-send-delay-send-and-exit=
+
+:general ([remap message-send-and-exit] 'mu4e-send-delay-send-and-exit)
+
+* How it works
+
+This package adds a “X-Delay” header (see =mu4e-send-delay-header=) to emails. The value of this header is the amount of time after the user “sends” this email that this email should actually be sent. /For acceptable values,/ read the docstring of =mu4e-send-delay-parse-delay-header-string=.
+
+The user must call the =mu4e-send-delay-send-and-exit= command in an =mu4e-compose= buffer for their email to be delayed. If called with a prefix argument, the email is sent immediately, with no delay, via =message-send-and-exit=.
+
+Emails whose emails are delayed are saved as drafts in the =mu4e-drafts-folder=. Once =mu4e-send-delay-send-due-timer= is run, then all delayed emails are sent. Users can manually send delayed emails by running the command =mu4e-send-delay-send-due=.
+
+* Configuration
+
+** Keybinds
+
+The command =mu4e-send-delay-send-and-exit= is responsible for initiating =mu4e-send-delay='s functionality. Therefore, users should bind it to a key. The best option is to remap =message-send-and-exit=, the command bound to =C-c C-c= in =mu4e-compose-map= and =message-mode-map=.
 #+BEGIN_SRC emacs-lisp
-(add-hook 'mu4e-main-mode-hook (lambda ()
-                                 (define-key mu4e-compose-mode-map
-                                   (kbd "C-c C-c")
-                                   'mu4e-send-delay-send-and-exit)))
+  (define-key mu4e-compose-mode-map [remap message-send-and-exit] 'mu4e-send-delay-send-and-exit)
 #+END_SRC
 
-Now you can =C-c C-c= every mail
+** Variables
 
-** Defaults
++ =mu4e-send-delay-default-delay= is the default value for the “X-Delay” header
++ =mu4e-send-delay-timer= is the interval in which =mu4e-send-delay-send-due-timer= is run
++ =mu4e-send-delay-include-header-in-draft= controls whether the delay header is added during composition or right before the user sends the email (with =mu4e-send-delay-send-and-exit=)
++ =mu4e-send-strip-header-before-send= controls whether to remove the header once sent so that it does not appear in recipients' copy of the email
 
-- =mu4e-send-delay-default-delay= is set to "3m"
-- =mu4e-send-delay-timer= is set to every 2 minutes
-- =mu4e-send-delay-include-header-in-draft= is true
-- =mu4e-send-strip-header-before-send= is true
+* Particularies
+
+Right now the sent buffer will be re-encoded to utf-8, to avoid mml.el complaining upon a scheduled sent. If you notice your mails arriving garbled despite looking okay in the Drafts, please consider the following emacs options:
+#+begin_src emacs-lisp
+  (prefer-coding-system 'utf-8)
+  (set-language-environment "UTF-8")
+#+end_src
