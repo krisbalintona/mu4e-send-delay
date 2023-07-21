@@ -298,7 +298,7 @@ lead to duplicate emails that you will have to manually remove."
           (run-with-timer 0 mu4e-send-delay-timer 'mu4e-send-delay-send-due))))
 
 ;;;; org-msg advice
-(defun mu4e-send-delay-org-msg-ctrl-c-ctrl-c (arg)
+(defun mu4e-send-delay-org-msg-ctrl-c-ctrl-c (&optional arg)
   "Send message like `message-send-and-exit'.
 
 Identical to the original `org-msg-ctrl-c-ctrl-c', but calls
