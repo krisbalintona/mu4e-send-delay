@@ -344,8 +344,8 @@ Also show delay info in `mu4e-headers-mode' and `mu4e-view-mode'."
                                              "")))))
   (add-to-list 'mu4e-view-fields :send-delay t)
   (if mu4e-send-delay-enable-org-msg
-      (advice-add 'org-msg-ctrl-c-ctrl-c :override #'mu4e-message-send-delay-org-msg-ctrl-c-ctrl-c)
-    (advice-remove 'org-msg-ctrl-c-ctrl-c :override #'mu4e-message-send-delay-org-msg-ctrl-c-ctrl-c)))
+      (advice-add 'org-msg-ctrl-c-ctrl-c :override #'mu4e-send-delay-org-msg-ctrl-c-ctrl-c)
+    (advice-remove 'org-msg-ctrl-c-ctrl-c :override #'mu4e-send-delay-org-msg-ctrl-c-ctrl-c)))
 
 (provide 'mu4e-send-delay)
 
