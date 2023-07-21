@@ -307,7 +307,7 @@ it."
   (interactive (list current-prefix-arg))
   (when (eq major-mode 'org-msg-edit-mode)
     (org-msg-sanity-check)
-    (if current-prefix-arg
+    (if arg
         (org-msg-mua-call 'send 'mu4e-send-delay-send-and-exit arg)
       (org-msg-mua-call 'send-and-exit 'mu4e-send-delay-send-and-exit arg))))
 
