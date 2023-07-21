@@ -298,18 +298,17 @@ lead to duplicate emails that you will have to manually remove."
           (run-with-timer 0 mu4e-send-delay-timer 'mu4e-send-delay-send-due))))
 
 ;;;; org-msg advice
-(defun mu4e-send-delay-org-msg-ctrl-c-ctrl-c (&optional arg)
+(defun mu4e-send-delay-org-msg-ctrl-c-ctrl-c ()
   "Send message like `message-send-and-exit'.
 
 Identical to the original `org-msg-ctrl-c-ctrl-c', but calls
 `mu4e-send-delay-send-and-exit' instead as well as passes ARG to
 it."
-  (interactive (list current-prefix-arg))
   (when (eq major-mode 'org-msg-edit-mode)
     (org-msg-sanity-check)
-    (if arg
-        (org-msg-mua-call 'send 'mu4e-send-delay-send-and-exit arg)
-      (org-msg-mua-call 'send-and-exit 'mu4e-send-delay-send-and-exit arg))))
+    (if current-prefix-arg
+        (org-msg-mua-call 'send 'mu4e-send-delay-send-and-exit current-prefix-arg)
+      (org-msg-mua-call 'send-and-exit 'mu4e-send-delay-send-and-exit current-prefix-arg))))
 
 ;;;; Setup
 (defun mu4e-send-delay-setup ()
