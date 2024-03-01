@@ -38,7 +38,7 @@
 
 (require 'mu4e-view)
 (require 'mu4e-compose)
-(require 'mu4e-draft)
+;; (require 'mu4e-draft)
 
 (declare-function org-msg-edit-mode "org-msg" ())
 
@@ -194,7 +194,7 @@ are:
         (message-remove-header mu4e-send-delay-header nil)
         (message-add-header (format "%s: %s" mu4e-send-delay-header schedule-time))
 
-        (when (buffer-file-name) (mu4e~compose-set-parent-flag (buffer-file-name))) ; Set reply/forward flag
+        (when (buffer-file-name) (mu4e--set-parent-flags (buffer-file-name))) ; Set reply/forward flag
 
         (message-dont-send)
         (when message-kill-buffer-on-exit (kill-buffer (current-buffer)))
@@ -257,7 +257,7 @@ lead to duplicate emails that you will have to manually remove."
             ;; Force recode to fix character encoding issue
             (set-buffer-file-coding-system 'utf-8 t)
             (recode-region (point-min) (point-max) 'prefer-utf-8 'utf-8-unix)
-            (mu4e~draft-insert-mail-header-separator)
+            (insert mu4e--header-separator)
             (message-mode)
             (when mu4e-send-delay-strip-header-before-send
               (message-remove-header mu4e-send-delay-header nil))
