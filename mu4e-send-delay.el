@@ -275,7 +275,7 @@ lead to duplicate emails that you will have to manually remove."
     (let* ((dirs (if mu4e-contexts
                      (mapcar (lambda (context)
                                (mu4e-send-delay-with-mu4e-context context
-                                   (expand-file-name "cur" (concat (mu4e-root-maildir) (mu4e-get-drafts-folder)))))
+                                                                  (expand-file-name "cur" (concat (mu4e-root-maildir) (mu4e-get-drafts-folder)))))
                              mu4e-contexts)
                    (list (expand-file-name "cur" (concat (mu4e-root-maildir) (mu4e-get-drafts-folder)))))))
       (when (memq t
@@ -327,20 +327,20 @@ Also show delay info in `mu4e-headers-mode' and `mu4e-view-mode'."
   (interactive)
   (mu4e-send-delay-initialize-send-queue-timer)
   (advice-add 'mu4e~draft-common-construct :around
-                                           #'(lambda (orig-fun &rest args)
-                                                (concat
-                                                 (apply orig-fun args)
-                                                 (when mu4e-send-delay-include-header-in-draft
-                                                   (mu4e~draft-header mu4e-send-delay-header mu4e-send-delay-default-delay)))))
+              #'(lambda (orig-fun &rest args)
+                  (concat
+                   (apply orig-fun args)
+                   (when mu4e-send-delay-include-header-in-draft
+                     (mu4e~draft-header mu4e-send-delay-header mu4e-send-delay-default-delay)))))
   (add-to-list 'mu4e-header-info-custom
                '(:send-delay . (:name "X-Delay"
-                                :shortname "Delay"
-                                :help "Date/time when mail is scheduled for sending"
-                                :function (lambda (msg)
-                                            (or
-                                             (mu4e-send-delay-return-delay-header-value
-                                              (mu4e-message-field msg :path))
-                                             "")))))
+                                      :shortname "Delay"
+                                      :help "Date/time when mail is scheduled for sending"
+                                      :function (lambda (msg)
+                                                  (or
+                                                   (mu4e-send-delay-return-delay-header-value
+                                                    (mu4e-message-field msg :path))
+                                                   "")))))
   (add-to-list 'mu4e-view-fields :send-delay t)
   (if mu4e-send-delay-enable-org-msg
       (advice-add 'org-msg-ctrl-c-ctrl-c :override #'mu4e-send-delay-org-msg-ctrl-c-ctrl-c)
