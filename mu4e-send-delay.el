@@ -54,13 +54,13 @@
 
 (defcustom mu4e-send-delay-strip-header-before-send t
   "If non-nil, remove `mu4e-send-delay-header' before sending mail."
-  :type 'bool
+  :type 'boolean
   :group 'mu4e-delay)
 
 (defcustom mu4e-send-delay-include-header-in-draft t
   "Whether to include the delay header when starting to draft a message.
 If nil, add delay header only when sending the message."
-  :type 'bool
+  :type 'boolean
   :group 'mu4e-delay)
 
 (defcustom mu4e-send-delay-default-delay "10m"
@@ -83,7 +83,7 @@ If nil, add delay header only when sending the message."
 
 Toggle `mu4e-send-delay-setup' if you change the value of this
 variable after `mu4e-send-delay-setup' has already been called"
-  :type 'bool
+  :type 'boolean
   :group 'mu4e-delay)
 
 ;;;; Functions
